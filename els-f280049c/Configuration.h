@@ -40,7 +40,7 @@
 //================================================================================
 
 // For Imperial leadscrews: pitch in Threads Per Inch (TPI)
-#define LEADSCREW_TPI 12
+#define LEADSCREW_TPI 16 // This is with the gearbox set to THREAD (not feed) on speed C (lowest gear)
 
 // For metric leadscrews: pitch in hundredths of a millimeter (HMM)
 // Example: 200hmm = 2mm
@@ -96,7 +96,7 @@
 //================================================================================
 
 // Encoder resolution (counts per revolution)
-#define ENCODER_RESOLUTION 4096
+#define ENCODER_RESOLUTION 5461.333 //= 4096 * 40 / 30 (40T spindle gear x 30T encoder gears)
 
 // Which encoder input to use
 #define ENCODER_USE_EQEP1
