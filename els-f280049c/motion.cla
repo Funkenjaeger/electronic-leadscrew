@@ -1,7 +1,6 @@
 //###########################################################################
 // Description:
 //
-// Task 1: Implements an FIR_ORDER+1 tap FIR filter
 //
 //###########################################################################
 
@@ -9,12 +8,9 @@
 #include "F28x_Project.h"
 #include "Configuration.h"
 #include "cla_shared.h"
+#include "Encoder.h"
+#include "motion.h"
 
-// globals
-int16_t filter_in;
-extern float feed;
-extern bool powerOn;
-extern bool alarm;
 
 // Core engine
 #ifdef USE_FLOATING_POINT
@@ -25,9 +21,7 @@ extern bool alarm;
     const FEED_THREAD *previousFeed;
 #endif // USE_FLOATING_POINT
 
-extern int16 feedDirection;
 int16 previousFeedDirection;
-
 Uint32 previousSpindlePosition;
 
 // Stepper driver stuff
@@ -39,65 +33,13 @@ bool stepperEnabled; // Drive enable
 // Encoder stuff
 Uint32 previous;
 Uint16 rpm;
-extern Uint16 rpm_out;
 
-#ifdef ENCODER_USE_EQEP1
-#define ENCODER_REGS EQep1Regs
-#endif
-#ifdef ENCODER_USE_EQEP2
-#define ENCODER_REGS EQep2Regs
-#endif
-
-#define _ENCODER_MAX_COUNT 0x00ffffff
 Uint16 getRPM(void);
-//inline Uint32 getPosition(void);
-//inline Uint32 getMaxCount(void);
 inline int32 feedRatio(Uint32);
-
-#define STEP_PIN GPIO0
-#define DIRECTION_PIN GPIO1
-#define ENABLE_PIN GPIO6
-#define ALARM_PIN GPIO7
-
-#define GPIO_SET(pin) GpioDataRegs.GPASET.bit.pin = 1
-#define GPIO_CLEAR(pin) GpioDataRegs.GPACLEAR.bit.pin = 1
-#define GPIO_GET(pin) GpioDataRegs.GPADAT.bit.pin
-
-#ifdef INVERT_STEP_PIN
-#define GPIO_SET_STEP GPIO_CLEAR(STEP_PIN)
-#define GPIO_CLEAR_STEP GPIO_SET(STEP_PIN)
-#else
-#define GPIO_SET_STEP GPIO_SET(STEP_PIN)
-#define GPIO_CLEAR_STEP GPIO_CLEAR(STEP_PIN)
-#endif
-
-#ifdef INVERT_DIRECTION_PIN
-#define GPIO_SET_DIRECTION GPIO_CLEAR(DIRECTION_PIN)
-#define GPIO_CLEAR_DIRECTION GPIO_SET(DIRECTION_PIN)
-#else
-#define GPIO_SET_DIRECTION GPIO_SET(DIRECTION_PIN)
-#define GPIO_CLEAR_DIRECTION GPIO_CLEAR(DIRECTION_PIN)
-#endif
-
-#ifdef INVERT_ENABLE_PIN
-#define GPIO_SET_ENABLE GPIO_CLEAR(ENABLE_PIN)
-#define GPIO_CLEAR_ENABLE GPIO_SET(ENABLE_PIN)
-#else
-#define GPIO_SET_ENABLE GPIO_SET(ENABLE_PIN)
-#define GPIO_CLEAR_ENABLE GPIO_CLEAR(ENABLE_PIN)
-#endif
-
-#ifdef INVERT_ALARM_PIN
-#define GPIO_GET_ALARM (GPIO_GET(ALARM_PIN) == 0)
-#else
-#define GPIO_GET_ALARM (GPIO_GET(ALARM_PIN) != 0)
-#endif
 
 //Task 1 :
 __attribute__((interrupt))  void Cla1Task1 ( void )
 {
-    //__mdebugstop();
-
     if (powerOn) {  GPIO_SET_ENABLE; } else { GPIO_CLEAR_ENABLE; }
 
     if( feed != NULL ) {
@@ -181,46 +123,14 @@ __attribute__((interrupt))  void Cla1Task1 ( void )
     EPwm1Regs.ETCLR.bit.INT = 1; // Clear ePWM1 interrupt flag to allow the next interrupt
 }
 
-__attribute__((interrupt))  void Cla1Task2 ( void )
-{
-	
-}
-__attribute__((interrupt))  void Cla1Task3 ( void )
-{
-	
-}
-__attribute__((interrupt))  void Cla1Task4 ( void )
-{
-	
-}
-__attribute__((interrupt))  void Cla1Task5 ( void )
-{
-	
-}
-__attribute__((interrupt))  void Cla1Task6 ( void )
-{
-	
-}
-__attribute__((interrupt))  void Cla1Task7 ( void )
-{
-	
-}
-
 // Task 8: initialize things
 __attribute__((interrupt))  void Cla1Task8 ( void )
 {
+    // Initialize local variables & IO state
     currentPosition = 0;
     desiredPosition = 0;
     state = 0;
 
-    // Initialize Stepper Hardware
-    // ***************************
-    // Configure GPIO pins for output
-    // GPIO0 = Step
-    // GPIO1 = Direction
-    // GPIO6 - Enable
-    // GPIO
-    //
     __meallow();
     GPIO_CLEAR_STEP;
     GPIO_CLEAR_DIRECTION;
@@ -264,13 +174,3 @@ inline int32 feedRatio(Uint32 count)
     return ((long long)count) * feed->numerator / feed->denominator * feedDirection;
 #endif // USE_FLOATING_POINT
 }
-
-/*inline Uint32 getPosition(void)
-{
-    return ENCODER_REGS.QPOSCNT;
-}
-
-inline Uint32 getMaxCount(void)
-{
-    return _ENCODER_MAX_COUNT;
-}*/

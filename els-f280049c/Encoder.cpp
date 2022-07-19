@@ -27,14 +27,7 @@
 #include "Encoder.h"
 #include "Configuration.h"
 
-
-Encoder :: Encoder( void )
-{
-    this->previous = 0;
-    this->rpm = 0;
-}
-
-void Encoder :: initHardware(void)
+void initEncoderHardware(void)
 {
     EALLOW;
 
@@ -88,25 +81,4 @@ void Encoder :: initHardware(void)
 
     ENCODER_REGS.QEPCTL.bit.QPEN=1;            // QEP enable
 
-}
-
-Uint16 Encoder :: getRPM(void)
-{
-    if(ENCODER_REGS.QFLG.bit.UTO==1)       // If unit timeout (one 10Hz period)
-    {
-        Uint32 current = ENCODER_REGS.QPOSLAT;
-        Uint32 count = (current > previous) ? current - previous : previous - current;
-
-        // deal with over/underflow
-        if( count > _ENCODER_MAX_COUNT/2 ) {
-            count = _ENCODER_MAX_COUNT - count; // just subtract from max value
-        }
-
-        rpm = count * 60 * RPM_CALC_RATE_HZ / ENCODER_RESOLUTION;
-
-        previous = current;
-        ENCODER_REGS.QCLR.bit.UTO=1;       // Clear interrupt flag
-    }
-
-    return rpm;
 }

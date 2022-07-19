@@ -39,33 +39,6 @@
 
 #define _ENCODER_MAX_COUNT 0x00ffffff
 
-
-class Encoder
-{
-private:
-    Uint32 previous;
-    Uint16 rpm;
-
-public:
-    Encoder( void );
-    void initHardware( void );
-
-    Uint16 getRPM( void );
-    Uint32 getPosition( void );
-    Uint32 getMaxCount( void );
-};
-
-
-inline Uint32 Encoder :: getPosition(void)
-{
-    return ENCODER_REGS.QPOSCNT;
-}
-
-inline Uint32 Encoder :: getMaxCount(void)
-{
-    return _ENCODER_MAX_COUNT;
-}
-
-
+void initEncoderHardware(void);
 
 #endif // __ENCODER_H

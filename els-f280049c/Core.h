@@ -27,39 +27,13 @@
 #ifndef __CORE_H
 #define __CORE_H
 
-#include "StepperDrive.h"
-#include "Encoder.h"
 #include "ControlPanel.h"
 #include "Tables.h"
-
-extern float feed;
-extern uint16_t rpm_out;
-extern bool alarm;
-extern bool powerOn;
-extern int16 feedDirection;
+#include "cla_shared.h"
 
 class Core
 {
 private:
-    //Encoder *encoder;
-    //StepperDrive *stepperDrive;
-
-/*#ifdef USE_FLOATING_POINT
-//    float feed;
-//    float previousFeed;
-#else
-//    const FEED_THREAD *feed;
-//    const FEED_THREAD *previousFeed;
-#endif // USE_FLOATING_POINT*/
-
-    //int16 feedDirection;
-    //int16 previousFeedDirection;
-
-    //Uint32 previousSpindlePosition;
-
-    //int32 feedRatio(Uint32 count);
-
-    //bool powerOn;
 
 public:
     Core();
@@ -71,8 +45,6 @@ public:
 
     bool isPowerOn();
     void setPowerOn(bool);
-
-    void ISR( void );
 };
 
 inline void Core :: setFeed(const FEED_THREAD *newFeed)
@@ -98,49 +70,5 @@ inline bool Core :: isPowerOn()
 {
     return powerOn;
 }
-
-/*inline int32 Core :: feedRatio(Uint32 count)
-{
-#ifdef USE_FLOATING_POINT
-    return ((float)count) * feed * feedDirection;
-#else // USE_FLOATING_POINT
-    return ((long long)count) * feed->numerator / feed->denominator * feedDirection;
-#endif // USE_FLOATING_POINT
-}*/
-
-// Moved functionality to CLA
-inline void Core :: ISR( void )
-{
-    /*if( this->feed != NULL ) {
-        // read the encoder
-        Uint32 spindlePosition = encoder->getPosition();
-
-        // calculate the desired stepper position
-        int32 desiredSteps = feedRatio(spindlePosition);
-        stepperDrive->setDesiredPosition(desiredSteps);
-
-        // compensate for encoder overflow/underflow
-        if( spindlePosition < previousSpindlePosition && previousSpindlePosition - spindlePosition > encoder->getMaxCount()/2 ) {
-            stepperDrive->incrementCurrentPosition(-1 * feedRatio(encoder->getMaxCount()));
-        }
-        if( spindlePosition > previousSpindlePosition && spindlePosition - previousSpindlePosition > encoder->getMaxCount()/2 ) {
-            stepperDrive->incrementCurrentPosition(feedRatio(encoder->getMaxCount()));
-        }
-
-        // if the feed or direction changed, reset sync to avoid a big step
-        if( feed != previousFeed || feedDirection != previousFeedDirection) {
-            stepperDrive->setCurrentPosition(desiredSteps);
-        }
-
-        // remember values for next time
-        previousSpindlePosition = spindlePosition;
-        previousFeedDirection = feedDirection;
-        previousFeed = feed;
-
-        // service the stepper drive state machine
-        stepperDrive->ISR();
-    }*/
-}
-
 
 #endif // __CORE_H
