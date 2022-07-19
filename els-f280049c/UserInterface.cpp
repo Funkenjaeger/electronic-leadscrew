@@ -118,6 +118,12 @@ LED_REG UserInterface::calculateLEDs()
     return leds;
 }
 
+void UserInterface :: init()
+{
+    this->core->setReverse(this->reverse);
+    this->core->setFeed(loadFeedTable());
+}
+
 void UserInterface :: setMessage(const MESSAGE *message)
 {
     this->message = message;

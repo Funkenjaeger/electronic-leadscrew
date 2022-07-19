@@ -32,32 +32,37 @@
 #include "ControlPanel.h"
 #include "Tables.h"
 
+extern float feed;
+extern uint16_t rpm_out;
+extern bool alarm;
+extern bool powerOn;
+extern int16 feedDirection;
 
 class Core
 {
 private:
-    Encoder *encoder;
-    StepperDrive *stepperDrive;
+    //Encoder *encoder;
+    //StepperDrive *stepperDrive;
 
-#ifdef USE_FLOATING_POINT
-    float feed;
-    float previousFeed;
+/*#ifdef USE_FLOATING_POINT
+//    float feed;
+//    float previousFeed;
 #else
-    const FEED_THREAD *feed;
-    const FEED_THREAD *previousFeed;
-#endif // USE_FLOATING_POINT
+//    const FEED_THREAD *feed;
+//    const FEED_THREAD *previousFeed;
+#endif // USE_FLOATING_POINT*/
 
-    int16 feedDirection;
-    int16 previousFeedDirection;
+    //int16 feedDirection;
+    //int16 previousFeedDirection;
 
-    Uint32 previousSpindlePosition;
+    //Uint32 previousSpindlePosition;
 
-    int32 feedRatio(Uint32 count);
+    //int32 feedRatio(Uint32 count);
 
-    bool powerOn;
+    //bool powerOn;
 
 public:
-    Core( Encoder *encoder, StepperDrive *stepperDrive );
+    Core();
 
     void setFeed(const FEED_THREAD *feed);
     void setReverse(bool reverse);
@@ -70,42 +75,43 @@ public:
     void ISR( void );
 };
 
-inline void Core :: setFeed(const FEED_THREAD *feed)
+inline void Core :: setFeed(const FEED_THREAD *newFeed)
 {
 #ifdef USE_FLOATING_POINT
-    this->feed = (float)feed->numerator / feed->denominator;
+    feed = (float)newFeed->numerator / newFeed->denominator;
 #else
-    this->feed = feed;
+    feed = newFeed;
 #endif // USE_FLOATING_POINT
 }
 
 inline Uint16 Core :: getRPM(void)
 {
-    return encoder->getRPM();
+    return rpm_out;
 }
 
 inline bool Core :: isAlarm()
 {
-    return this->stepperDrive->isAlarm();
+    return alarm;
 }
 
 inline bool Core :: isPowerOn()
 {
-    return this->powerOn;
+    return powerOn;
 }
 
-inline int32 Core :: feedRatio(Uint32 count)
+/*inline int32 Core :: feedRatio(Uint32 count)
 {
 #ifdef USE_FLOATING_POINT
-    return ((float)count) * this->feed * feedDirection;
+    return ((float)count) * feed * feedDirection;
 #else // USE_FLOATING_POINT
     return ((long long)count) * feed->numerator / feed->denominator * feedDirection;
 #endif // USE_FLOATING_POINT
-}
+}*/
 
+// Moved functionality to CLA
 inline void Core :: ISR( void )
 {
-    if( this->feed != NULL ) {
+    /*if( this->feed != NULL ) {
         // read the encoder
         Uint32 spindlePosition = encoder->getPosition();
 
@@ -133,7 +139,7 @@ inline void Core :: ISR( void )
 
         // service the stepper drive state machine
         stepperDrive->ISR();
-    }
+    }*/
 }
 
 

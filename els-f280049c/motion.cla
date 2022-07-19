@@ -1,0 +1,276 @@
+//###########################################################################
+// Description:
+//
+// Task 1: Implements an FIR_ORDER+1 tap FIR filter
+//
+//###########################################################################
+
+
+#include "F28x_Project.h"
+#include "Configuration.h"
+#include "cla_shared.h"
+
+// globals
+int16_t filter_in;
+extern float feed;
+extern bool powerOn;
+extern bool alarm;
+
+// Core engine
+#ifdef USE_FLOATING_POINT
+    //float feed;
+    float previousFeed;
+#else
+    const FEED_THREAD *feed;
+    const FEED_THREAD *previousFeed;
+#endif // USE_FLOATING_POINT
+
+extern int16 feedDirection;
+int16 previousFeedDirection;
+
+Uint32 previousSpindlePosition;
+
+// Stepper driver stuff
+int32 currentPosition; // Current position of the motor, in steps
+int32 desiredPosition; // Desired position of the motor, in steps
+Uint16 state; // State machine state (bit 1 = DIR, bit 0 = STEP)
+bool stepperEnabled; // Drive enable
+
+// Encoder stuff
+Uint32 previous;
+Uint16 rpm;
+extern Uint16 rpm_out;
+
+#ifdef ENCODER_USE_EQEP1
+#define ENCODER_REGS EQep1Regs
+#endif
+#ifdef ENCODER_USE_EQEP2
+#define ENCODER_REGS EQep2Regs
+#endif
+
+#define _ENCODER_MAX_COUNT 0x00ffffff
+Uint16 getRPM(void);
+//inline Uint32 getPosition(void);
+//inline Uint32 getMaxCount(void);
+inline int32 feedRatio(Uint32);
+
+#define STEP_PIN GPIO0
+#define DIRECTION_PIN GPIO1
+#define ENABLE_PIN GPIO6
+#define ALARM_PIN GPIO7
+
+#define GPIO_SET(pin) GpioDataRegs.GPASET.bit.pin = 1
+#define GPIO_CLEAR(pin) GpioDataRegs.GPACLEAR.bit.pin = 1
+#define GPIO_GET(pin) GpioDataRegs.GPADAT.bit.pin
+
+#ifdef INVERT_STEP_PIN
+#define GPIO_SET_STEP GPIO_CLEAR(STEP_PIN)
+#define GPIO_CLEAR_STEP GPIO_SET(STEP_PIN)
+#else
+#define GPIO_SET_STEP GPIO_SET(STEP_PIN)
+#define GPIO_CLEAR_STEP GPIO_CLEAR(STEP_PIN)
+#endif
+
+#ifdef INVERT_DIRECTION_PIN
+#define GPIO_SET_DIRECTION GPIO_CLEAR(DIRECTION_PIN)
+#define GPIO_CLEAR_DIRECTION GPIO_SET(DIRECTION_PIN)
+#else
+#define GPIO_SET_DIRECTION GPIO_SET(DIRECTION_PIN)
+#define GPIO_CLEAR_DIRECTION GPIO_CLEAR(DIRECTION_PIN)
+#endif
+
+#ifdef INVERT_ENABLE_PIN
+#define GPIO_SET_ENABLE GPIO_CLEAR(ENABLE_PIN)
+#define GPIO_CLEAR_ENABLE GPIO_SET(ENABLE_PIN)
+#else
+#define GPIO_SET_ENABLE GPIO_SET(ENABLE_PIN)
+#define GPIO_CLEAR_ENABLE GPIO_CLEAR(ENABLE_PIN)
+#endif
+
+#ifdef INVERT_ALARM_PIN
+#define GPIO_GET_ALARM (GPIO_GET(ALARM_PIN) == 0)
+#else
+#define GPIO_GET_ALARM (GPIO_GET(ALARM_PIN) != 0)
+#endif
+
+//Task 1 :
+__attribute__((interrupt))  void Cla1Task1 ( void )
+{
+    //__mdebugstop();
+
+    if (powerOn) {  GPIO_SET_ENABLE; } else { GPIO_CLEAR_ENABLE; }
+
+    if( feed != NULL ) {
+
+        // read the encoder
+        Uint32 spindlePosition = EQep1Regs.QPOSCNT; //ENCODER_REGS.QPOSCNT;
+
+        // calculate the desired stepper position
+        int32 desiredSteps = feedRatio(spindlePosition);
+        desiredPosition = desiredSteps;
+
+        // compensate for encoder overflow/underflow
+        if( spindlePosition < previousSpindlePosition && previousSpindlePosition - spindlePosition > _ENCODER_MAX_COUNT/2 ) {
+            currentPosition += -1 * feedRatio(_ENCODER_MAX_COUNT);
+        }
+        if( spindlePosition > previousSpindlePosition && spindlePosition - previousSpindlePosition > _ENCODER_MAX_COUNT/2 ) {
+            currentPosition += feedRatio(_ENCODER_MAX_COUNT);
+        }
+
+        // if the feed or direction changed, reset sync to avoid a big step
+        if( feed != previousFeed || feedDirection != previousFeedDirection) {
+            currentPosition = desiredSteps;
+        }
+
+        // remember values for next time
+        previousSpindlePosition = spindlePosition;
+        previousFeedDirection = feedDirection;
+        previousFeed = feed;
+
+        rpm_out = getRPM();
+
+        // service the stepper drive state machine
+        if(stepperEnabled) {
+
+            switch( state ) {
+
+            case 0:
+                // Step = 0; Dir = 0
+                if( desiredPosition < currentPosition ) {
+                    GPIO_SET_STEP;
+                    state = 2;
+                }
+                else if( desiredPosition > currentPosition ) {
+                    GPIO_SET_DIRECTION;
+                    state = 1;
+                }
+                break;
+
+            case 1:
+                // Step = 0; Dir = 1
+                if( desiredPosition > currentPosition ) {
+                    GPIO_SET_STEP;
+                    state = 3;
+                }
+                else if( desiredPosition < currentPosition ) {
+                    GPIO_CLEAR_DIRECTION;
+                    state = 0;
+                }
+                break;
+
+            case 2:
+                // Step = 1; Dir = 0
+                GPIO_CLEAR_STEP;
+                currentPosition--;
+                state = 0;
+                break;
+
+            case 3:
+                // Step = 1; Dir = 1
+                GPIO_CLEAR_STEP;
+                currentPosition++;
+                state = 1;
+                break;
+            }
+
+        } else {
+            // not enabled; just keep current position in sync
+            currentPosition = desiredPosition;
+        }
+    }
+    EPwm1Regs.ETCLR.bit.INT = 1; // Clear ePWM1 interrupt flag to allow the next interrupt
+}
+
+__attribute__((interrupt))  void Cla1Task2 ( void )
+{
+	
+}
+__attribute__((interrupt))  void Cla1Task3 ( void )
+{
+	
+}
+__attribute__((interrupt))  void Cla1Task4 ( void )
+{
+	
+}
+__attribute__((interrupt))  void Cla1Task5 ( void )
+{
+	
+}
+__attribute__((interrupt))  void Cla1Task6 ( void )
+{
+	
+}
+__attribute__((interrupt))  void Cla1Task7 ( void )
+{
+	
+}
+
+// Task 8: initialize things
+__attribute__((interrupt))  void Cla1Task8 ( void )
+{
+    currentPosition = 0;
+    desiredPosition = 0;
+    state = 0;
+
+    // Initialize Stepper Hardware
+    // ***************************
+    // Configure GPIO pins for output
+    // GPIO0 = Step
+    // GPIO1 = Direction
+    // GPIO6 - Enable
+    // GPIO
+    //
+    __meallow();
+    GPIO_CLEAR_STEP;
+    GPIO_CLEAR_DIRECTION;
+    __medis();
+
+    stepperEnabled = true;
+
+    previousSpindlePosition = 0;
+    previousFeedDirection = 0;
+    previousFeed = NULL;
+
+    powerOn = true; // default to power on
+}
+
+Uint16 getRPM(void)
+{
+    if(ENCODER_REGS.QFLG.bit.UTO==1)       // If unit timeout (one 10Hz period)
+    {
+        Uint32 current = ENCODER_REGS.QPOSLAT;
+        Uint32 count = (current > previous) ? current - previous : previous - current;
+
+        // deal with over/underflow
+        if( count > _ENCODER_MAX_COUNT/2 ) {
+            count = _ENCODER_MAX_COUNT - count; // just subtract from max value
+        }
+
+        rpm = count * 60 * RPM_CALC_RATE_HZ / ENCODER_RESOLUTION;
+
+        previous = current;
+        ENCODER_REGS.QCLR.bit.UTO=1;       // Clear interrupt flag
+    }
+
+    return rpm;
+}
+
+inline int32 feedRatio(Uint32 count)
+{
+#ifdef USE_FLOATING_POINT
+    return ((float)count) * feed * feedDirection;
+#else // USE_FLOATING_POINT
+    return ((long long)count) * feed->numerator / feed->denominator * feedDirection;
+#endif // USE_FLOATING_POINT
+}
+
+/*inline Uint32 getPosition(void)
+{
+    return ENCODER_REGS.QPOSCNT;
+}
+
+inline Uint32 getMaxCount(void)
+{
+    return _ENCODER_MAX_COUNT;
+}*/

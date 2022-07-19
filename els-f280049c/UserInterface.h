@@ -67,6 +67,8 @@ public:
 
     void loop( void );
 
+    void init(void);
+
     void panicStepBacklog( void );
 };
 

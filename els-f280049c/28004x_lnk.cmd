@@ -23,13 +23,38 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+// The user must define CLA_C in the project linker settings if using the
+// CLA C compiler
+// Project Properties -> C2000 Linker -> Advanced Options -> Command File
+// Preprocessing -> --define
+//--define=CLA_C=1
+
+// Define a size for the CLA scratchpad area that will be used
+// by the CLA compiler for local symbols and temps
+// Also force references to the special symbols that mark the
+// scratchpad are.
+//
+// NOTE: CLAScratch is no longer in use and is superceded by
+// .scratchpad. It is kept here for legacy libraries
+//
+// Define a size for the CLA scratchpad area that will be used
+// by the CLA compiler for local symbols and temps
+// Also force references to the special symbols that mark the
+// scratchpad are.
+//
+// NOTE: CLAScratch is no longer in use and is superceded by
+// .scratchpad. It is kept here for legacy libraries
+//
+CLA_SCRATCHPAD_SIZE = 0x100;
+/*--undef_sym=__cla_scratchpad_end
+--undef_sym=__cla_scratchpad_start*/
 
 MEMORY
 {
 PAGE 0 :
-   /* BEGIN is used for the "boot to SARAM" bootloader mode   */
+   /* BEGIN is used for the "boot to Flash" bootloader mode   */
 
-   BEGIN           	: origin = 0x000000, length = 0x000002
+   BEGIN           	: origin = 0x080000, length = 0x000002
    RAMM0           	: origin = 0x0000F5, length = 0x00030B
 
    RAMLS0          	: origin = 0x008000, length = 0x000800
@@ -39,9 +64,9 @@ PAGE 0 :
    RAMLS4      		: origin = 0x00A000, length = 0x000800
    RESET           	: origin = 0x3FFFC0, length = 0x000002
 
- /* Flash sectors: you can use FLASH for program memory when the RAM is filled up*/
+   /* Flash sectors */
    /* BANK 0 */
-   FLASH_BANK0_SEC0  : origin = 0x080000, length = 0x001000	/* on-chip Flash */
+   FLASH_BANK0_SEC0  : origin = 0x080002, length = 0x000FFE	/* on-chip Flash */
    FLASH_BANK0_SEC1  : origin = 0x081000, length = 0x001000	/* on-chip Flash */
    FLASH_BANK0_SEC2  : origin = 0x082000, length = 0x001000	/* on-chip Flash */
    FLASH_BANK0_SEC3  : origin = 0x083000, length = 0x001000	/* on-chip Flash */
@@ -58,7 +83,7 @@ PAGE 0 :
    FLASH_BANK0_SEC14 : origin = 0x08E000, length = 0x001000	/* on-chip Flash */
    FLASH_BANK0_SEC15 : origin = 0x08F000, length = 0x001000	/* on-chip Flash */
 
-  /* BANK 1 */
+   /* BANK 1 */
    FLASH_BANK1_SEC0  : origin = 0x090000, length = 0x001000	/* on-chip Flash */
    FLASH_BANK1_SEC1  : origin = 0x091000, length = 0x001000	/* on-chip Flash */
    FLASH_BANK1_SEC2  : origin = 0x092000, length = 0x001000	/* on-chip Flash */
@@ -81,34 +106,82 @@ PAGE 1 :
    BOOT_RSVD       : origin = 0x000002, length = 0x0000F3     /* Part of M0, BOOT rom will use this for stack */
    RAMM1           : origin = 0x000400, length = 0x000400     /* on-chip RAM block M1 */
 
+   CLA1_MSGRAMLOW  : origin = 0x001480, length = 0x000080
+   CLA1_MSGRAMHIGH : origin = 0x001500, length = 0x000080
+
    RAMLS5      : origin = 0x00A800, length = 0x000800
    RAMLS6      : origin = 0x00B000, length = 0x000800
    RAMLS7      : origin = 0x00B800, length = 0x000800
-   
+
    RAMGS0      : origin = 0x00C000, length = 0x002000
    RAMGS1      : origin = 0x00E000, length = 0x002000
    RAMGS2      : origin = 0x010000, length = 0x002000
    RAMGS3      : origin = 0x012000, length = 0x002000
 }
 
-/*You can arrange the .text, .cinit, .const, .pinit, .switch and .econst to FLASH when RAM is filled up.*/
+
 SECTIONS
 {
-   codestart        : > BEGIN,     PAGE = 0
-   .TI.ramfunc      : > RAMM0      PAGE = 0
-   .text            : >>RAMM0 | RAMLS0 | RAMLS1 | RAMLS2 | RAMLS3 | RAMLS4,   PAGE = 0
-   .cinit           : > RAMM0,     PAGE = 0
-   .pinit           : > RAMM0,     PAGE = 0
-   .switch          : > RAMM0,     PAGE = 0
-   .cio             : > RAMLS0,    PAGE = 0
+   codestart        : > BEGIN,     PAGE = 0, ALIGN(4)
+   .text            : >>FLASH_BANK0_SEC1 | FLASH_BANK0_SEC2 | FLASH_BANK0_SEC3,   PAGE = 0, ALIGN(4)
+   .cinit           : > FLASH_BANK0_SEC1,     PAGE = 0, ALIGN(4)
+   .pinit           : > FLASH_BANK0_SEC1,     PAGE = 0, ALIGN(4)
+   .switch          : > FLASH_BANK0_SEC1,     PAGE = 0, ALIGN(4)
    .reset           : > RESET,     PAGE = 0, TYPE = DSECT /* not used, */
 
+   .cio             : > RAMLS0,    PAGE = 0
    .stack           : > RAMM1,     PAGE = 1
-   .ebss            : > RAMLS5|RAMLS6,    PAGE = 1
-   .econst          : >> RAMLS5|RAMLS6,    PAGE = 1
-   .esysmem         : > RAMLS5|RAMLS6,    PAGE = 1
+   .ebss            : > RAMLS5,    PAGE = 1
+   .esysmem         : > RAMLS5,    PAGE = 1   
+   .econst          : > FLASH_BANK0_SEC4,    PAGE = 0, ALIGN(4)
+
+   Cla1Prog         : fill = 0x5555 //fill value for holes
+                      {
+                       .+=0x4;  // empty space at head of section
+                       *(Cla1Prog)
+                       }
+                       LOAD = FLASH_BANK0_SEC5,
+                       RUN = RAMLS4,
+                       RUN_START(_Cla1ProgRunStart),
+                       LOAD_START(_Cla1ProgLoadStart),
+                       LOAD_SIZE(_Cla1ProgLoadSize),
+                       PAGE = 0
 
    ramgs0           : > RAMGS0,    PAGE = 1
-   ramgs1           : > RAMGS1,    PAGE = 1  
+   ramgs1           : > RAMGS1,    PAGE = 1
+
+   .TI.ramfunc      : LOAD = FLASH_BANK0_SEC1,
+                         RUN = RAMLS0 | RAMLS1 | RAMLS2 |RAMLS3,
+                         LOAD_START(_RamfuncsLoadStart),
+                         LOAD_SIZE(_RamfuncsLoadSize),
+                         LOAD_END(_RamfuncsLoadEnd),
+                         RUN_START(_RamfuncsRunStart),
+                         RUN_SIZE(_RamfuncsRunSize),
+                         RUN_END(_RamfuncsRunEnd),
+                         PAGE = 0, ALIGN(4)
+
+	Cla1ToCpuMsgRAM  : > CLA1_MSGRAMLOW,   PAGE = 1
+	CpuToCla1MsgRAM  : > CLA1_MSGRAMHIGH,  PAGE = 1
+
+	/* CLA C compiler and test sections */
+    //
+    // Must be allocated to memory the CLA has write access to
+    //
+    // CLAscratch is the legacy code model scratch pad. use
+    // .scratchpad in the new model
+    CLAscratch       :
+                     { *.obj(CLAscratch)
+                     . += CLA_SCRATCHPAD_SIZE;
+                     *.obj(CLAscratch_end) } >  RAMLS5,  PAGE = 1
+    .scratchpad		: > RAMLS7,		PAGE = 1
+    .bss_cla		    : > RAMLS7,       PAGE = 1
+    .const_cla	    :  LOAD = FLASH_BANK0_SEC6,
+                       RUN  = RAMLS7,
+                       RUN_START(_Cla1ConstRunStart),
+                       LOAD_START(_Cla1ConstLoadStart),
+                       LOAD_SIZE(_Cla1ConstLoadSize),
+                       PAGE = 1
+	Cla1DataRam     : > RAMLS7,       PAGE = 1
+
 }
 

@@ -27,39 +27,37 @@
 #include "F28x_Project.h"
 #include "Core.h"
 
-
-
-Core :: Core( Encoder *encoder, StepperDrive *stepperDrive )
+Core :: Core()
 {
-    this->encoder = encoder;
-    this->stepperDrive = stepperDrive;
+    //this->encoder = encoder;
+    //this->stepperDrive = stepperDrive;
 
-    this->feed = NULL;
-    this->feedDirection = 0;
+    feed = NULL;
+    feedDirection = 0;
 
-    this->previousSpindlePosition = 0;
-    this->previousFeedDirection = 0;
-    this->previousFeed = NULL;
+    //this->previousSpindlePosition = 0;
+    //this->previousFeedDirection = 0;
+    //this->previousFeed = NULL;
 
-    this->powerOn = true; // default to power on
+    //this->powerOn = true; // default to power on
 }
 
 void Core :: setReverse(bool reverse)
 {
     if( reverse )
     {
-        this->feedDirection = -1;
+        feedDirection = -1;
     }
     else
     {
-        this->feedDirection = 1;
+        feedDirection = 1;
     }
 }
 
-void Core :: setPowerOn(bool powerOn)
+void Core :: setPowerOn(bool state)
 {
-    this->powerOn = powerOn;
-    this->stepperDrive->setEnabled(powerOn);
+    powerOn = state;
+    //this->stepperDrive->setEnabled(powerOn);
 }
 
 

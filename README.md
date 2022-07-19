@@ -4,6 +4,10 @@ This is the firmware for a lathe electronic leadscrew controller.  The goal is t
 gears or gearbox on a metalworking lathe with a stepper motor controlled electronically based on an encoder on the
 lathe spindle.  The electronic controller allows setting different virtual gear ratios for feeds and threading.
 
+## Changes from original Clough42 code
+
+What I'm working on is moving all the time-critical motion-related code (encoder, stepper drive) over to the Control Law Accelerator (CLA) coprocessor available in the TI F280049C microcontroller.  The CLA is a specialized, floating-point, task-oriented coprocessor optimized for functions like motion control.  The main motivation here, aside from being a more elegant solution, is to enable the integration of proper acceleration-limited (trapezoidal) motion control without worrying about whether the extra math will overburden the main CPU.  That's not necessarily an issue for the baseline use case where the leadscrew always follows the spindle, but I expect it would become problematic if one were to integrate more advanced features that require abruptly starting or stopping the leadscrew while the spindle is running - like threading/feeding up to a hard shoulder with automatic stop.
+
 ![Silkscreened Control Panel](https://raw.githubusercontent.com/clough42/electronic-leadscrew/master/docs/images/CPKit.jpg)
 
 ## License and Disclaimer
