@@ -50,35 +50,6 @@ extern "C" {
 //
 // Common CPU Definitions:
 //
-#ifdef __TMS320C28XX_CLA__
-//
-// There are only two assembly instructions that can access the MSTF register
-// - MMOV32 mem32, MSTF
-// - MMOV32 mem32, MSTF
-// The CLA C compiler allows 'C' access to this control register through the __cregister
-// keyword. In order to access the register's contents, the user must copy it to the
-// shadow object defined below
-// Note that _MSTF is the only __cregister recognized by the CLA C compiler; IER and IFR
-// are not accessible (therefore not recognized), therefore __cregister must be redefined to
-// null to prevent a cla C compiler error
-//
-struct MSTF_SHADOW_BITS {     // bits description
-    unsigned short LVF:1;     // 0    Latched Overflow Flag
-    unsigned short LUF:1;     // 1    Latched Underflow Flag
-    unsigned short NF:1;      // 2    Negative Float Flag
-    unsigned short ZF:1;      // 3    Zero Float Flag
-    unsigned short rsvd1:2;   // 5:4  Reserved
-    unsigned short TF:1;      // 6    Test Flag
-    unsigned short rsvd2:2;   // 8:7  Reserved
-    unsigned short RNDF32:1;  // 9    Rounding Mode
-    unsigned short rsvd3:1;   // 10   Reserved
-    unsigned short MEALLOW:1; // 11   MEALLOW Status
-    unsigned short RPCL:4;    // 15:12    Return PC: Low Portion
-    unsigned short RPCH:12;   // 27:16    Return PC: High Portion
-    unsigned short rsvd4:4;   // 31:28    Reserved
-};
-extern __cregister volatile unsigned int MSTF;
-#endif //__TMS320C28XX_CLA__
 
 #ifndef __TMS320C28XX__
 #define __cregister
