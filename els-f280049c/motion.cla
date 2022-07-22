@@ -45,7 +45,7 @@ __attribute__((interrupt))  void Cla1Task1 ( void )
     if( feed != NULL ) {
 
         // read the encoder
-        Uint32 spindlePosition = EQep1Regs.QPOSCNT; //ENCODER_REGS.QPOSCNT;
+        Uint32 spindlePosition = ENCODER_REGS.QPOSCNT;
 
         // calculate the desired stepper position
         int32 desiredSteps = feedRatio(spindlePosition);
@@ -147,7 +147,7 @@ __attribute__((interrupt))  void Cla1Task8 ( void )
 
 Uint16 getRPM(void)
 {
-    if(ENCODER_REGS.QFLG.bit.UTO==1)       // If unit timeout (one 10Hz period)
+    if(ENCODER_REGS.QFLG.bit.UTO==1)       // If unit timeout (one period at RPM_CALC_RATE_HZ)
     {
         Uint32 current = ENCODER_REGS.QPOSLAT;
         Uint32 count = (current > previous) ? current - previous : previous - current;
